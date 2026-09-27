@@ -1,0 +1,86 @@
+Option Explicit
+
+Public Sub testIt()
+    Dim bResult As Boolean
+    bResult = ConnectAndSetupSQLServer
+End Sub
+
+Public Function ConnectAndSetupSQLServer() As Boolean
+    Dim accConnection As Object
+    Dim sqlString As String
+    Dim connString As String
+
+    ' --- Datos de conexión ---
+    Dim serverName As String
+    Dim dbName As String
+    Dim authType As String  ' "Windows" o "SQL"
+    Dim sqlUser As String
+    Dim sqlPassword As String
+
+    serverName = "NOMBRE_SERVIDOR\INSTANCIA"   ' ej: "localhost\SQLEXPRESS"
+    dbName = "TestingDB"
+    authType = "Windows"                        ' cambia a "SQL" si usas usuario/clave
+    sqlUser = "usuario"
+    sqlPassword = "clave"
+
+    Set accConnection = CreateObject("ADODB.Connection")
+
+    ' --- Cadena de conexión ---
+    If authType = "Windows" Then
+        ' Autenticación integrada de Windows (recomendada si aplica)
+        connString = "Provider=MSOLEDBSQL;Server=" & serverName & _
+                     ";Database=" & dbName & ";Integrated Security=SSPI;"
+    Else
+        ' Autenticación SQL Server (usuario y contraseña)
+        connString = "Provider=MSOLEDBSQL;Server=" & serverName & _
+                     ";Database=" & dbName & ";Uid=" & sqlUser & ";Pwd=" & sqlPassword & ";"
+    End If
+
+    On Error GoTo ConnError
+    accConnection.Open connString
+    On Error GoTo 0
+
+    ' --- Crear la tabla si no existe ---
+    sqlString = "IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='tblVehicleRental' AND xtype='U') " & _
+                "CREATE TABLE tblVehicleRental (" & _
+                "RecordID INT IDENTITY(1,1) PRIMARY KEY," & _
+                "VehicleModel NVARCHAR(50)," & _
+                "VehicleYear NVARCHAR(20)," & _
+                "VehicleBrand NVARCHAR(50)," & _
+                "VehicleSegment NVARCHAR(50)," & _
+                "UpperMileageLimit NVARCHAR(50)," & _
+                "LicensePlate NVARCHAR(50)," & _
+                "MilageOnPurchase NVARCHAR(50)," & _
+                "TotalMileageUsage NVARCHAR(50))"
+
+    accConnection.Execute sqlString
+
+    ' --- Insertar registros usando parámetros (evita errores de comillas e inyección SQL) ---
+    Call InsertVehicle(accConnection, "Porsche 911", "2023", "5000", "CHARLIE9")
+    Call InsertVehicle(accConnection, "4Runner", "2025", "15000", "OREGON5")
+
+    accConnection.Close
+    ConnectAndSetupSQLServer = True
+    Exit Function
+
+ConnError:
+    MsgBox "No se pudo conectar a SQL Server: " & Err.Description, vbCritical, "Error de conexión"
+    ConnectAndSetupSQLServer = False
+End Function
+
+Public Sub InsertVehicle(ByVal conn As Object, ByVal model As String, ByVal yr As String, _
+                          ByVal mileageLimit As String, ByVal plate As String)
+    Dim cmd As Object
+    Set cmd = CreateObject("ADODB.Command")
+
+    With cmd
+        .ActiveConnection = conn
+        .CommandText = "INSERT INTO tblVehicleRental (VehicleModel, VehicleYear, UpperMileageLimit, LicensePlate) " & _
+                       "VALUES (?, ?, ?, ?)"
+        .Parameters.Append .CreateParameter("model", 200, 1, 50, model)   ' adVarChar = 200, adParamInput = 1
+        .Parameters.Append .CreateParameter("yr", 200, 1, 20, yr)
+        .Parameters.Append .CreateParameter("mlimit", 200, 1, 50, mileageLimit)
+        .Parameters.Append .CreateParameter("plate", 200, 1, 50, plate)
+        .Execute
+    End With
+End Sub

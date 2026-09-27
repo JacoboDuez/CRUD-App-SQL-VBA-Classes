@@ -1,0 +1,64 @@
+#Corrección.
+VALUES ('Porsche 911','2023','5000','CHARLIE9')
+
+#Mejora en el concatenado duplicado!
+sqlString = sqlString & sqlString2
+accConnection.Execute sqlString
+
+#Particion de Queries 
+sqlString = "INSERT INTO tblVehicleRental " & _
+            "(VehicleModel, VehicleYear, UpperMileageLimit, LicensePlate) " & _
+            "VALUES ('Porsche 911', '2023', '5000', 'CHARLIE9')"
+accConnection.Execute sqlString
+
+sqlString = "INSERT INTO tblVehicleRental " & _
+            "(VehicleModel, VehicleYear, UpperMileageLimit, LicensePlate) " & _
+            "VALUES ('4Runner', '2025', '15000', 'OREGON5')"
+accConnection.Execute sqlString
+
+#Pasar de Access A SQL Server
+CREATE TABLE dbo.tblVehicleRental (
+    RecordID int IDENTITY(1,1) PRIMARY KEY,
+    VehicleModel nvarchar(50),
+    VehicleYear int,
+    UpperMileageLimit int,
+    LicensePlate nvarchar(50),
+    VehicleBrand nvarchar(50),
+    VehicleSegment nvarchar(50),
+    MileageOnPurchase int,
+    TotalMileageUsage int
+);
+Dim conn As Object
+
+Set conn = CreateObject("ADODB.Connection")
+
+conn.Open "Provider=MSOLEDBSQL;" & _
+          "Server=MI_SERVIDOR;" & _
+          "Database=MI_BASE_DE_DATOS;" & _
+          "Integrated Security=SSPI;" & _
+          "Encrypt=Yes;TrustServerCertificate=No;"
+
+#Inserción de parametros
+
+Const adCmdText As Long = 1
+Const adVarWChar As Long = 202
+Const adInteger As Long = 3
+Const adParamInput As Long = 1
+
+Dim cmd As Object
+Set cmd = CreateObject("ADODB.Command")
+
+Set cmd.ActiveConnection = conn
+cmd.CommandType = adCmdText
+cmd.CommandText = _
+    "INSERT INTO dbo.tblVehicleRental " & _
+    "(VehicleModel, VehicleYear, UpperMileageLimit, LicensePlate) " & _
+    "VALUES (?, ?, ?, ?)"
+
+cmd.Parameters.Append cmd.CreateParameter(, adVarWChar, adParamInput, 50, "Porsche 911")
+cmd.Parameters.Append cmd.CreateParameter(, adInteger, adParamInput, , 2023)
+cmd.Parameters.Append cmd.CreateParameter(, adInteger, adParamInput, , 5000)
+cmd.Parameters.Append cmd.CreateParameter(, adVarWChar, adParamInput, 50, "CHARLIE9")
+
+cmd.Execute
+Set cmd = Nothing

@@ -1,0 +1,75 @@
+Public Sub testIt()
+    Dim bResult As Boolean
+    bResult = ConnectAndSetupSqlServer
+End Sub
+
+Public Function ConnectAndSetupSqlServer() As Boolean
+    Dim dbConnection As Object
+    Dim sqlString As String
+    Dim serverName As String
+    Dim databaseName As String
+    Dim connectionString As String
+    
+    ' Configura los datos de tu servidor y base de datos
+    serverName = "NOMBRE_DE_TU_SERVIDOR" ' Ej: "localhost" o "localhost\SQLEXPRESS"
+    databaseName = "NOMBRE_DE_TU_BD"
+    
+    ' Cadena de conexión con Autenticación Integrada de Windows
+    connectionString = "Provider=MSOLEDBSQL;Data Source=" & serverName & _
+                       ";Initial Catalog=" & databaseName & _
+                       ";Integrated Security=SSPI;"
+                       
+    ' Si usas usuario y contraseña de SQL Server, usa esta alternativa:
+    ' connectionString = "Provider=MSOLEDBSQL;Data Source=" & serverName & _
+    '                    ";Initial Catalog=" & databaseName & _
+    '                    ";User ID=tu_usuario;Password=tu_password;"
+
+    On Error GoTo ErrorHandler
+
+    Set dbConnection = CreateObject("ADODB.Connection")
+    dbConnection.Open connectionString
+    
+    ' 1. Crear Tabla en SQL Server
+    ' Nota: 'IDENTITY(1,1)' reemplaza a 'AUTOINCREMENT' y 'VARCHAR' a 'TEXT'
+    sqlString = "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'tblVehicleRental') " & _
+                "BEGIN " & _
+                "CREATE TABLE tblVehicleRental (" & _
+                " RecordID INT IDENTITY(1,1) PRIMARY KEY," & _
+                " VehicleModel VARCHAR(50)," & _
+                " VehicleYear VARCHAR(20)," & _
+                " VehicleBrand VARCHAR(50)," & _
+                " VehicleSegment VARCHAR(50)," & _
+                " UpperMileageLimit VARCHAR(50)," & _
+                " LicensePlate VARCHAR(50)," & _
+                " MilageOnPurchase VARCHAR(50)," & _
+                " TotalMileageUsage VARCHAR(50)" & _
+                ") END"
+                
+    dbConnection.Execute sqlString
+    
+    ' 2. Insertar registros (Comillas corregidas)
+    sqlString = "INSERT INTO tblVehicleRental (VehicleModel, VehicleYear, UpperMileageLimit, LicensePlate) " & _
+                "VALUES ('Porsche 911', '2023', '5000', 'CHARLIE9')"
+                
+    dbConnection.Execute sqlString
+    
+    sqlString = "INSERT INTO tblVehicleRental (VehicleModel, VehicleYear, UpperMileageLimit, LicensePlate) " & _
+                "VALUES ('4Runner', '2025', '15000', 'OREGON5')"
+                
+    dbConnection.Execute sqlString
+    
+    MsgBox "Proceso completado con éxito en SQL Server.", vbInformation, "Éxito"
+    ConnectAndSetupSqlServer = True
+
+CleanExit:
+    If Not dbConnection Is Nothing Then
+        If dbConnection.State = 1 Then dbConnection.Close
+        Set dbConnection = Nothing
+    End If
+    Exit Function
+
+ErrorHandler:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "Error de Conexión/SQL"
+    ConnectAndSetupSqlServer = False
+    Resume CleanExit
+End Function
