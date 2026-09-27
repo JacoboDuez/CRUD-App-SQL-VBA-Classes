@@ -1,0 +1,140 @@
+Public Sub testIt()
+bResult = CreateAccessDatabase
+End Sub
+Public Sub deleteAllCoincidences(ByVal sPath As String, ByVal sFileName As String)
+Dim xFileName As String
+
+
+xFileName = Dir(sPath)
+bDeletedFiles = 0
+
+Do While xFileName <> ""
+    If InStr(1, UCase(xFileName), UCase(sFileName), vbBinaryCompare) >= 1 Then
+        Kill sPath & xFileName
+        bDeletedFiles = bDeletedFiles + 1
+    End If
+    xFileName = Dir
+Loop
+
+    If bDeletedFiles > 0 Then
+        Debug.Print (bDeletedFiles & " were deleted from the directory  : " & vbNewLine & sPath)
+    End If
+    
+
+
+End Sub
+Public Function CreateAccessDatabase() As Boolean
+Dim fsObject As Object, oShell As Object, accApp As Object, sqlString As String, accCatalog As Object, dbName As String
+
+
+    
+    Set oShell = CreateObject("Shell.Application")
+    Let accessDBPath = "C:\Users\" & getNetworkUsername & "\VBA Apps\CRUD App\"
+    Let dbName = "Testing.accdb"
+    Debug.Print (accessDBPath)
+    
+    
+
+    
+    Call createFullPath(accessDBPath)
+    Call deleteAllCoincidences(accessDBPath, dbName)
+    Shell """C:\Program Files\Microsoft Office\root\Office16\MSACCESS.EXE""", vbNormalFocus
+    'Implement a pause procedure here
+    Call setPause(5)
+    
+    
+    Set accApp = GetObject(, "Access.Application")
+    
+    Set accConnection = CreateObject("ADODB.Connection")
+     '  This Access Database Object Allows me to create databases,tables and more objects, while ADODB mostly helps me to manipulate the data within MSAccess
+    Set accCatalog = CreateObject("ADOX.Catalog")
+    
+    accCatalog.Create "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & accessDBPath & dbName
+    'accConnection.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & accessDBPath & dbName
+    
+    
+    If Not VerifyFileExistence(accessDBPath, ".ACCDB", dbName) Then
+        MsgBox "The Database could not be generated!", vbCritical, "Function Error at CreateAccessDatabase function"
+        GoTo finalSection
+    End If
+    
+    Set accCatalog = Nothing
+    
+    accConnection.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & accessDBPath & dbName
+    
+  
+    
+  
+
+    sqlString = "CREATE TABLE tblVehicleRental ( RecordID  AUTOINCREMENT PRIMARY KEY," & _
+    "VehicleModel TEXT (50)," & _
+    "VehicleYear TEXT(20)," & _
+    "VehicleBrand TEXT(50)," & _
+    "VehicleSegment TEXT(50)," & _
+    "UpperMileageLimit TEXT (50)," & _
+    "LicensePlate TEXT (50)," & _
+    "MilageOnPurchase TEXT (50)," & _
+    "TotalMileageUsage TEXT(50))"
+        
+    Debug.Print (sqlString)
+    
+    accConnection.Execute sqlString
+    
+
+    sqlString = "INSERT INTO tblVehicleRental (VehicleModel,VehicleYear,UpperMileageLimit,LicensePlate) VALUES ('Porsche 911','2023,'5000','CHARLIE9')"
+    sqlString2 = "INSERT INTO tblVehicleRental (VehicleModel,VehicleYear,UpperMileageLimit,LicensePlate) VALUES ('4Runner','2025','15000','OREGON5')"
+
+    accConnection.Execute sqlString
+    accConnection.Execute sqlString2
+    
+
+    sqlString = sqlString & sqlString2
+    
+    accConnection.Execute sqlString
+ 
+
+    
+finalSection:
+    
+    
+    
+
+End Function
+Public Function createFullPath(ByVal xPath As String) As Boolean
+Dim fsObject As Object, sPossiblePaths As Variant
+
+Set fsObject = CreateObject("Scripting.FileSystemObject")
+bPathExists = False
+
+If Not fsObject.FolderExists(xPath) Then
+    sPossiblePaths = Split(xPath, "\")
+    For t = 0 To UBound(sPossiblePaths)
+        If t <> UBound(sPossiblePaths) Then
+            sConcatenatedPath = sConcatenatedPath & sPossiblePaths(t) & "\"
+        Else
+            sConcatenatedPath = sConcatenatedPath & sPossiblePaths(t) & "\"
+        End If
+        If Not fsObject.FolderExists(sConcatenatedPath) Then
+            MkDir sConcatenatedPath
+        End If
+    Next t
+End If
+
+
+If Not fsObject.FolderExists(xPath) Then
+    bPathExists = False
+Else
+    bPathExists = True
+End If
+
+createFullPath = bPathExists
+
+End Function
+Public Function getNetworkUsername() As String
+Dim wScriptObject As Object
+
+Set wScriptObject = CreateObject("wScript.Network")
+
+getNetworkUsername = LCase(wScriptObject.UserName)
+
+End Function
